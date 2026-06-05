@@ -1,5 +1,7 @@
 # Codex Profile Manager
 
+English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
+
 A native macOS menu bar app for managing multiple Codex account profiles with
 isolated `CODEX_HOME` directories, quota visibility, switch preflight checks,
 and renewal reminders.
