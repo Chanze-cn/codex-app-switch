@@ -33,14 +33,14 @@ struct CodexLauncher {
         status=$?
         echo
         if [ "$status" -eq 0 ]; then
-          echo "登录流程已结束。请回到 Codex 多账号管理器点击“刷新额度”。"
+          echo "登录流程已结束。终端将自动退出，请回到 Codex 多账号管理器点击“刷新额度”。"
         else
           echo "登录命令退出码：$status"
           echo "你也可以复制下面命令手动执行："
           echo "\(command.replacingOccurrences(of: "\"", with: "\\\""))"
         fi
         echo
-        read -k 1 "?按任意键关闭窗口..."
+        exit "$status"
         """
         try scriptBody.write(to: script, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)

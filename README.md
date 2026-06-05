@@ -1,131 +1,271 @@
 # Codex Profile Manager
 
-Native macOS menu bar app for managing isolated Codex profiles, live quota
-visibility, renewal reminders, and task handoffs.
+A native macOS menu bar app for managing multiple Codex account profiles with
+isolated `CODEX_HOME` directories, quota visibility, switch preflight checks,
+and renewal reminders.
 
-## 配置两个账号
+> This project is an independent local helper. It does not bypass Codex or
+> OpenAI account limits, and it does not replace the official `codex login`
+> flow.
 
-1. 启动应用，点击右上角 `+`，可填写辅助备注并创建账号。
-2. 在打开的终端和浏览器中完成第一个 ChatGPT Plus 账号的官方 Codex 登录。
-3. 回到应用点击“刷新额度”，软件会绑定并显示真实 Codex 登录账号。
-4. 再次点击 `+` 创建“账号 B”，登录第二个 ChatGPT Plus 账号。
-5. 点击目标账号卡片中的“切换”，选择切换模式，必要时先点“模拟预检”，再确认切换。
-6. 应用现在会显示在 Dock，并使用专用图标；窗口内和菜单栏入口都可以操作。
+## Overview
 
-## 如何切换 Codex Mac 客户端账号
+Codex Profile Manager is built for users who legitimately use more than one
+Codex-capable account and want a safer way to switch the local Codex Desktop
+runtime between them.
 
-这个工具的目标是：每个账号只需要独立登录一次，之后在 Codex Mac 客户端中切换账号时，不再手动 `logout` / `login`。
+Instead of repeatedly running `codex logout` and `codex login`, the app creates
+one local profile per account. Each profile owns its own `CODEX_HOME`, so OAuth
+credentials and account-specific state can stay separated. When switching, the
+app validates the target profile, checks for running tasks, prepares the desired
+state-sharing mode, stops Codex Desktop, and relaunches it with the selected
+runtime environment.
 
-### 首次准备
+## Features
 
-每个账号都必须先完成一次独立登录：
+- Native macOS SwiftUI menu bar app.
+- Multiple Codex profiles, each backed by an independent `CODEX_HOME`.
+- Official login flow launcher for each profile.
+- Real account binding after quota refresh, using the account returned by Codex.
+- Live quota snapshots for primary and secondary rate-limit windows.
+- Three switch modes:
+  - **Isolated**: account, threads, projects, tools, and config stay in the
+    profile's own `CODEX_HOME`.
+  - **Shared State**: accounts share one local Codex state directory while the
+    selected account credentials are copied in during switch.
+  - **Partial Shared**: account credentials and threads stay isolated, while
+    config, tools, skills, prompts, themes, rules, MCP config, and hooks are
+    synchronized.
+- Switch preflight to validate auth, identity, state preparation, and local
+  context preservation expectations before changing the active account.
+- Active-task guard that blocks switching if the current Codex account appears
+  to have running tasks.
+- Renewal-day reminders with configurable reminder offsets.
+- Operation logs and audit logs stored locally for troubleshooting.
+- Packaging script for a signed local `.app` bundle.
 
-1. 在本工具中为账号 A 创建 Profile，并完成官方 `codex login`。
-2. 为账号 B 创建另一个 Profile，并完成官方 `codex login`。
-3. 两个账号卡片都显示真实 Codex 账号并标记“已绑定”后，才算准备完成。
+## What Problem It Solves
 
-每个 Profile 都有自己的独立 `CODEX_HOME`，登录凭据分别保存在：
+Codex Desktop and the official CLI are designed around a single active local
+runtime home. That is simple, but inconvenient when you need to keep two
+accounts cleanly separated.
+
+This app focuses on three practical goals:
+
+1. Keep credentials isolated per account.
+2. Make switching explicit and reversible enough to avoid losing local context.
+3. Surface quota and renewal signals near the workflow where they matter.
+
+## Requirements
+
+- macOS 14 or later.
+- Swift 6.1 toolchain.
+- Codex Desktop installed as `Codex.app`.
+- Official `codex` CLI available in `PATH`, `/opt/homebrew/bin`, or
+  `/usr/local/bin`.
+
+## Build
+
+Run the self-tests:
+
+```sh
+Scripts/run_self_tests.sh
+```
+
+Build with Swift Package Manager:
+
+```sh
+swift build
+```
+
+Build a local `.app` bundle:
+
+```sh
+Scripts/package_app.sh
+```
+
+The packaged app is written to:
+
+```text
+Build/CodexProfileManager.app
+```
+
+## Usage
+
+### 1. Create a Profile
+
+Open the app and click `+`.
+
+You can enter an optional display name, color, and monthly renewal day. The app
+creates a new profile directory and opens the official `codex login` command in
+Terminal with that profile's `CODEX_HOME`.
+
+After the browser authorization completes, the login command exits
+automatically. Return to the app and refresh quota to bind the profile to the
+real Codex account email.
+
+### 2. Add Additional Accounts
+
+Repeat the same flow for each account. Each profile receives a separate local
+directory:
 
 ```text
 ~/Library/Application Support/CodexProfileManager/Profiles/<profile-id>/
 ```
 
-因此账号 A 和账号 B 的 Codex 登录状态不会互相覆盖。
+The app treats a profile as logged in when its profile home contains an
+`auth.json` created by the official Codex login flow.
 
-### 日常切换
+### 3. Refresh Quota
 
-日常切换时不需要再手动退出登录或重新登录：
+Use refresh to fetch quota information for each profile. Refresh also binds the
+profile to the real account identity returned by Codex, which helps prevent
+accidentally reusing the same account in multiple profile cards.
 
-1. 确认目标账号卡片显示“已绑定”。
-2. 在目标账号卡片点击“切换”。
-3. 在确认面板中选择切换模式，必要时点击“模拟预检”。
-4. 如果当前账号没有运行中的 Codex 任务，工具会按所选模式完成切换。
+### 4. Switch Accounts
 
-三种切换模式的上下文边界不同：
+Click the target profile's switch action and choose a mode.
 
-- `完全独立`：只把 Codex Mac 客户端指向目标账号自己的 `CODEX_HOME`。账号、项目、线程、聊天和配置都隔离；最安全，但不会保留当前账号上下文。
-- `共享状态`：启动时使用工具维护的共享 `CODEX_HOME`，并把目标账号凭据放入该共享目录。它会尽量保留本地项目、线程和聊天状态；但远程线程是否能跨账号继续复用，仍取决于 Codex 官方能力，不能保证。
-- `部分共享`：目标账号继续使用自己的 `CODEX_HOME`，只同步配置、工具、skills、prompts 等；聊天线程和项目状态仍按账号独立。
+Before the switch completes, the app:
 
-工具会自动执行：
+- validates the target profile home;
+- verifies the target profile is logged in;
+- checks that the target account identity matches the bound profile;
+- checks recent Codex threads for active/running work;
+- prepares state according to the selected switch mode;
+- stops Codex Desktop;
+- relaunches Codex Desktop with the selected `CODEX_HOME`.
 
-- 检查当前账号是否有运行中的 Codex 任务。
-- 如果检测到运行中任务，阻止切换，避免丢失上下文。
-- 停止当前 Codex Mac 客户端。
-- 按所选模式准备目标 `CODEX_HOME`：独立模式使用目标账号目录，共享状态使用共享目录，部分共享使用目标账号目录并同步配置。
-- 将目标账号标记为当前账号。
+Use preflight when you want to see what will happen without stopping or
+relaunching Codex.
 
-也就是说，切换不是让你在 Codex Mac 客户端里手动 `logout` / `login`。工具会通过不同 `CODEX_HOME` 和所选模式准备启动环境，再拉起 Codex Mac 客户端。
+## Switch Modes
 
-如果你想确认这次切换会不会破坏上下文，先点“模拟预检”。预检只检查认证、运行中任务和状态准备结果，不会停止或启动 Codex，也不会改真实 Profile。
+### Isolated
 
-### 为什么之前要求填写项目目录和任务摘要
+The safest mode. Codex Desktop launches with the target profile's own
+`CODEX_HOME`.
 
-早期版本把“切换账号”和“任务交接”合并在一起，所以会要求填写项目目录、当前任务摘要和未完成事项。这些信息的作用是生成一份交接提示，让新账号在新线程里继续理解上下文。
+Use this when account separation matters more than preserving local thread or
+project context across accounts.
 
-现在日常切换不再要求填写这些信息。任务交接只适合在你确实想跨账号延续一个复杂任务时使用，不是普通切换账号的必要步骤。
+### Shared State
 
-### 当前限制
+Codex Desktop launches with a shared `CODEX_HOME` managed by this app. During
+switch, the selected account's auth file is copied into that shared state.
 
-- 首次添加每个账号时仍然需要完成一次官方 `codex login`。
-- 不会把旧账号的远程线程直接迁移到新账号。
-- 普通切换不会要求填写项目目录或任务摘要。
-- 如果当前账号有运行中的 Codex 任务，或者工具无法确认是否存在运行中任务，工具都会阻止切换。
-- 如果目标账号显示“未完成登录”或“登录已失效”，切换前需要先点击“登录/重新登录”。
-- 工具不会自动轮转账号，也不会绕过 Codex 或 OpenAI 的额度限制。
+This can preserve more local project and thread state, but remote thread reuse
+across accounts still depends on Codex behavior and is not guaranteed.
 
-## Safety model
+### Partial Shared
 
-- Each account has an independent `CODEX_HOME`.
-- OAuth credentials remain owned by the official `codex` CLI.
-- Shared-state switching temporarily copies the selected profile's `auth.json`
-  into the protected shared `CODEX_HOME`; credentials are never displayed or
-  written to operation logs.
-- Switching is always user initiated. There is no automatic rotation or quota pooling.
+Codex Desktop launches with the target profile's own `CODEX_HOME`, but selected
+configuration and customization files are synchronized from a shared area.
 
-## Development
+Currently shared items include:
 
-```bash
-swift build
-./Scripts/run_self_tests.sh
-swift run CodexProfileManager
-```
+- `config.toml`
+- `AGENTS.md`
+- `AGENTS.override.md`
+- `models_cache.json`
+- `skills/`
+- `plugins/`
+- `prompts/`
+- `themes/`
+- `rules/`
+- `mcp/`
+- `hooks/`
 
-The app requires macOS 14+ and an official `codex` executable on `PATH`.
-The self-test runner is framework-free because some Command Line Tools-only
-installations do not ship `XCTest` or Swift Testing.
+Use this when you want accounts and conversations isolated, while keeping tools
+and preferences consistent.
 
-## Troubleshooting
+## Data Storage
 
-### 刷新额度时报 `env: node: No such file or directory`
-
-官方 `codex` CLI 可能是 `#!/usr/bin/env node` 脚本。终端里能运行
-`codex`，不代表 macOS GUI 应用启动的环境也能找到 `node`，因为 GUI
-应用不会自动加载你的 shell、nvm 或 Homebrew PATH。
-
-本工具启动 `codex app-server` 时会显式补充常见 Node 路径，包括
-`/opt/homebrew/bin`、`/usr/local/bin` 和 `~/.nvm/versions/node/*/bin`。
-如果仍然报错，请确认 `node` 实际安装位置，并把它加入这些路径之一。
-
-Build an unsigned local `.app` bundle:
-
-```bash
-./Scripts/package_app.sh
-open ./Build/CodexProfileManager.app
-```
-
-## Profile storage
-
-Application metadata is stored under:
+By default, app data is stored under:
 
 ```text
 ~/Library/Application Support/CodexProfileManager/
 ```
 
-Individual Codex homes default to:
+Important paths:
 
 ```text
-~/Library/Application Support/CodexProfileManager/Profiles/<profile-id>/
+Profiles/              Per-account CODEX_HOME directories
+SharedCodexHome/       Runtime home used by shared-state mode
+PartialSharedState/    Shared config/tool state for partial-shared mode
+profiles.json          Profile metadata
+quota-cache.json       Cached quota snapshots
+audit.jsonl            High-level audit events
+operations.jsonl       Detailed operation logs
 ```
 
-These directories are created with owner-only permissions.
+For tests or local development, the root can be overridden with:
+
+```sh
+CODEX_PROFILE_MANAGER_ROOT=/tmp/codex-profile-manager-dev
+```
+
+## Safety Model
+
+- OAuth login is performed by the official `codex login` command.
+- Credentials remain local and are stored in profile-specific `CODEX_HOME`
+  directories.
+- Direct account switching is blocked when active Codex tasks are detected or
+  when the app cannot confirm that switching is safe.
+- Profile identity is validated against the account returned by Codex to reduce
+  accidental account mix-ups.
+- Local app directories are created with restrictive permissions where possible.
+- The app does not rotate accounts automatically and does not attempt to bypass
+  quotas or usage limits.
+
+## Current Limitations
+
+- Each account must complete the official login flow at least once.
+- Remote Codex threads are not migrated between accounts.
+- Shared-state mode can preserve local state, but it cannot guarantee that a
+  remote thread is usable from a different account.
+- If active-task detection cannot confirm a safe switch, the app blocks the
+  switch instead of guessing.
+- The app expects Codex Desktop and the Codex CLI to be installed locally.
+
+## Project Structure
+
+```text
+Sources/CodexProfileManager/
+  AppModel.swift                 Main app state and workflow orchestration
+  CodexLauncher.swift            Login, stop, and launch integration
+  CodexStateCoordinator.swift    Isolated/shared/partial state preparation
+  CodexAppServerClient.swift     Codex account, quota, and thread queries
+  ProfileStore.swift             Profile and quota persistence
+  RenewalReminderService.swift   Local renewal notifications
+  MainView.swift                 SwiftUI interface
+  Models.swift                   Shared data models
+  Paths.swift                    Runtime path and environment helpers
+  OperationLogger.swift          Local operation logs
+
+Scripts/
+  run_self_tests.sh              Lightweight self-test runner
+  package_app.sh                 Local app bundle packaging script
+  generate_icon.swift            App icon generation helper
+
+Tests/SelfTests/
+  main.swift                     Self-tests for model/state behavior
+```
+
+## Development
+
+Recommended checks before committing:
+
+```sh
+Scripts/run_self_tests.sh
+swift build
+```
+
+The self-test script compiles the core model and state-management files into a
+temporary binary and runs behavioral checks without writing to the user's real
+Codex profile data.
+
+## License
+
+No license has been selected yet. Add a `LICENSE` file before publishing if you
+want others to use, modify, or redistribute the project under explicit terms.

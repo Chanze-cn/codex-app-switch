@@ -491,7 +491,7 @@ private struct LoginCommandView: View {
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
-            Text("登录成功的标志：浏览器授权完成后，终端里 codex login 结束；回到本软件刷新后，会显示真实 Codex 账号并标记为“已绑定”。")
+            Text("登录成功的标志：浏览器授权完成后，codex login 结束并自动退出；回到本软件刷新后，会显示真实 Codex 账号并标记为“已绑定”。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack {
