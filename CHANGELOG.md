@@ -4,6 +4,13 @@ All notable project changes should be recorded here.
 
 This project follows the versioning policy in [docs/VERSIONING.md](docs/VERSIONING.md).
 
+## [0.2.1] - 2026-06-06
+
+### Fixed
+
+- Made the active profile pinning state visually explicit in the profile card.
+- Rebuilt the packaged app with the active-profile sorting behavior included.
+
 ## [0.2.0] - 2026-06-06
 
 ### Added

@@ -2,7 +2,7 @@
 
 Codex Profile Manager uses a conservative SemVer-style version policy.
 
-Current version: `0.2.0`
+Current version: `0.2.1`
 
 ## Source of Truth
 
@@ -28,12 +28,12 @@ Examples:
 
 - `0.1.0`
 - `0.1.1`
-- `0.2.0`
+- `0.2.1`
 - `1.0.0`
 
 ## Bump Rules
 
-### Patch: `0.2.0` -> `0.2.1`
+### Patch: `0.2.1` -> `0.2.2`
 
 Use a patch release for:
 
@@ -43,7 +43,7 @@ Use a patch release for:
 - documentation corrections that are shipped with a release;
 - small internal improvements that do not change user workflows.
 
-### Minor: `0.2.0` -> `0.3.0`
+### Minor: `0.2.1` -> `0.3.0`
 
 Use a minor release for:
 

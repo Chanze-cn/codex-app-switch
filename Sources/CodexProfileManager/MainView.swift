@@ -238,13 +238,34 @@ private struct ProfileCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if isActive {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.seal.fill")
+                    Text("当前正在使用的账号")
+                        .font(.caption.bold())
+                    Spacer()
+                    if let activeRuntimeMode {
+                        Text(activeRuntimeMode.title)
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(activeRuntimeMode.tint.opacity(0.16), in: Capsule())
+                            .foregroundStyle(activeRuntimeMode.tint)
+                    }
+                }
+                .foregroundStyle(.green)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(.green.opacity(0.10), in: RoundedRectangle(cornerRadius: 7))
+            }
+
             HStack {
                 Circle().fill(Color(hex: profile.colorHex)).frame(width: 10, height: 10)
                 Text(profile.displayName)
                     .font(.headline)
                     .lineLimit(1)
                 if isActive {
-                    Text("正在使用")
+                    Text("当前")
                         .font(.caption2.bold())
                         .foregroundStyle(.green)
                 }
@@ -863,7 +884,7 @@ struct SettingsView: View {
 
 private enum AppVersion {
     static var current: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.1"
     }
 }
 

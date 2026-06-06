@@ -68,7 +68,7 @@ This app focuses on three practical goals:
 
 ## Project Governance
 
-- Current version: [`0.2.0`](VERSION)
+- Current version: [`0.2.1`](VERSION)
 - Version policy: [docs/VERSIONING.md](docs/VERSIONING.md)
 - Branching and contribution workflow: [docs/BRANCHING.md](docs/BRANCHING.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
