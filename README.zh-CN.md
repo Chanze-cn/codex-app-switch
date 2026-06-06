@@ -244,8 +244,11 @@ swift build
 
 ## 赞助与联系
 
-如果这个项目帮你节省了时间，欢迎请作者喝一杯咖啡。支付宝和微信支付二维码可以
-放在 `docs/assets/` 目录，并在本区块展示。
+如果这个项目帮你节省了时间，欢迎请作者喝一杯咖啡。
+
+| 支付宝 | 微信支付 |
+| --- | --- |
+| <img src="docs/assets/sponsor-alipay.jpg" alt="支付宝收款码" width="260"> | <img src="docs/assets/sponsor-wechat.jpg" alt="微信支付收款码" width="260"> |
 
 如果你遇到问题、想反馈 bug，或希望私下联系作者，可以发邮件到：
 [781830133@qq.com](mailto:781830133@qq.com)。

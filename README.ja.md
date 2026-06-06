@@ -264,8 +264,11 @@ swift build
 ## サポートと連絡先
 
 このプロジェクトが役に立った場合は、作者にコーヒーをごちそうする形でサポート
-できます。Alipay と WeChat Pay の QR コード画像は `docs/assets/` に配置し、
-このセクションから表示できます。
+できます。
+
+| Alipay | WeChat Pay |
+| --- | --- |
+| <img src="docs/assets/sponsor-alipay.jpg" alt="Alipay QR code" width="260"> | <img src="docs/assets/sponsor-wechat.jpg" alt="WeChat Pay QR code" width="260"> |
 
 質問、不具合報告、または個別の連絡は、次のメールアドレスまでお願いします：
 [781830133@qq.com](mailto:781830133@qq.com)。

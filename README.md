@@ -270,8 +270,10 @@ Codex profile data.
 ## Support and Contact
 
 If this project saves you time, you can support the author by buying a coffee.
-Alipay and WeChat Pay QR codes can be placed under `docs/assets/` and linked
-from this section.
+
+| Alipay | WeChat Pay |
+| --- | --- |
+| <img src="docs/assets/sponsor-alipay.jpg" alt="Alipay QR code" width="260"> | <img src="docs/assets/sponsor-wechat.jpg" alt="WeChat Pay QR code" width="260"> |
 
 For questions, bug reports, or private feedback, contact:
 [781830133@qq.com](mailto:781830133@qq.com).
