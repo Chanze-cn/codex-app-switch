@@ -27,6 +27,7 @@ struct CodexProfileManagerApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ApplicationInstanceManager.terminateOtherInstances(reason: "appLaunched")
         NSApp.activate(ignoringOtherApps: true)
     }
 }

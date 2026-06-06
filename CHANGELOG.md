@@ -6,6 +6,12 @@ This project follows the versioning policy in [docs/VERSIONING.md](docs/VERSIONI
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-06-06
+
+### Fixed
+
+- Ensured Sparkle update relaunch cleans up older app instances and disabled automatic background update installation so restart remains user-confirmed.
+
 ## [0.3.3] - 2026-06-06
 
 ### Fixed

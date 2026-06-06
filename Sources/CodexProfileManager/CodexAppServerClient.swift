@@ -184,7 +184,7 @@ final class CodexAppServerClient: @unchecked Sendable {
                     id: 1,
                     method: "initialize",
                     params: [
-                        "clientInfo": ["name": "codex-profile-manager", "version": "0.3.3"],
+                        "clientInfo": ["name": "codex-profile-manager", "version": "0.3.4"],
                         "capabilities": ["experimentalApi": true],
                     ]
                 )
