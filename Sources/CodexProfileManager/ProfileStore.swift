@@ -103,6 +103,12 @@ final class ProfileStore: ObservableObject {
         }
     }
 
+    func clearActiveProfile() {
+        activeProfileID = nil
+        defaults.removeObject(forKey: activeProfileKey)
+        defaults.set(CodexSwitchMode.isolated.rawValue, forKey: activeRuntimeModeKey)
+    }
+
     func updateDefaultSwitchMode(for profile: CodexProfile, mode: CodexSwitchMode) throws {
         guard let index = profiles.firstIndex(where: { $0.id == profile.id }) else { return }
         profiles[index].defaultSwitchMode = mode

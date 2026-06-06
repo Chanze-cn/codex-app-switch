@@ -3,6 +3,7 @@ import SwiftUI
 struct MainView: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var store: ProfileStore
+    @State private var selectedPage: MainPage = .dashboard
 
     init(model: AppModel) {
         self.model = model
@@ -12,7 +13,7 @@ struct MainView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
+            Divider().opacity(0.55)
             if model.isSwitching {
                 HStack(spacing: 10) {
                     ProgressView().controlSize(.small)
@@ -20,9 +21,10 @@ struct MainView: View {
                         .font(.caption)
                     Spacer()
                 }
-                .padding(10)
-                .background(.blue.opacity(0.10))
-                Divider()
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .background(.blue.opacity(0.08))
+                Divider().opacity(0.55)
             }
             if let request = model.pendingSwitchRequest {
                 SwitchConfirmationView(
@@ -47,7 +49,7 @@ struct MainView: View {
                     },
                     cancel: { model.cancelSwitch() }
                 )
-                Divider()
+                Divider().opacity(0.55)
             }
             if store.profiles.isEmpty {
                 ContentUnavailableView(
@@ -63,28 +65,34 @@ struct MainView: View {
                                 model.statusMessage = nil
                             }
                         }
-                        ForEach(store.sortedProfiles) { profile in
-                            ProfileCard(
-                                profile: profile,
-                                quota: store.quotas[profile.id],
-                                isActive: store.activeProfileID == profile.id,
-                                isBusy: model.isSwitching,
-                                activeRuntimeMode: store.activeProfileID == profile.id ? store.activeRuntimeMode : nil,
-                                refresh: { Task { await model.refresh(profile) } },
-                                login: { model.login(profile) },
-                                switchProfile: { model.requestSwitch(to: profile) },
-                                changeMode: { model.setDefaultSwitchMode($0, for: profile) },
-                                editRenewal: { model.requestRenewalEdit(profile) },
-                                deleteProfile: { model.requestDelete(profile) }
-                            )
+                        if selectedPage == .dashboard {
+                            DashboardView(profiles: store.profiles, quotas: store.quotas)
+                        } else {
+                            ForEach(store.sortedProfiles) { profile in
+                                ProfileCard(
+                                    profile: profile,
+                                    quota: store.quotas[profile.id],
+                                    isActive: store.activeProfileID == profile.id,
+                                    isBusy: model.isSwitching,
+                                    activeRuntimeMode: store.activeProfileID == profile.id ? store.activeRuntimeMode : nil,
+                                    refresh: { Task { await model.refresh(profile) } },
+                                    login: { model.login(profile) },
+                                    switchProfile: { model.requestSwitch(to: profile) },
+                                    changeMode: { model.setDefaultSwitchMode($0, for: profile) },
+                                    editRenewal: { model.requestRenewalEdit(profile) },
+                                    deleteProfile: { model.requestDelete(profile) }
+                                )
+                            }
                         }
                     }
-                    .padding()
+                    .padding(18)
                 }
+                .background(AppBackdrop())
             }
-            Divider()
+            Divider().opacity(0.55)
             footer
         }
+        .background(.regularMaterial)
         .sheet(isPresented: $model.showingAddProfile) {
             AddProfileView { name, color, day in model.addProfile(name: name, colorHex: color, renewalDay: day) }
         }
@@ -132,14 +140,23 @@ struct MainView: View {
 
     private var header: some View {
         HStack(spacing: 14) {
-            Image(systemName: "person.2.badge.gearshape")
-                .font(.title2)
-                .foregroundStyle(.blue)
-                .frame(width: 34, height: 34)
-                .background(.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accentColor.opacity(0.20), Color.cyan.opacity(0.12)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Image(systemName: "person.2.badge.gearshape")
+                    .font(.title2)
+                    .foregroundStyle(.blue)
+            }
+            .frame(width: 38, height: 38)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Codex 账号")
-                    .font(.headline)
+                Text("Codex Profile Manager")
+                    .font(.headline.weight(.semibold))
                 if let active = store.activeProfile {
                     HStack(spacing: 6) {
                         Text(active.displayName)
@@ -154,27 +171,35 @@ struct MainView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            Picker("视图", selection: $selectedPage) {
+                ForEach(MainPage.allCases) { page in
+                    Label(page.title, systemImage: page.icon).tag(page)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 178)
             Spacer()
             if model.isRefreshing { ProgressView().controlSize(.small) }
             Button { model.quit() } label: {
                 Image(systemName: "power")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(HeaderIconButtonStyle())
             .help("退出软件")
             Button { Task { await model.refreshAll() } } label: {
                 Image(systemName: "arrow.clockwise")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(HeaderIconButtonStyle())
             .disabled(model.isRefreshing || model.isSwitching)
             .help("刷新全部账号额度")
             Button { model.showingAddProfile = true } label: {
                 Image(systemName: "plus")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(HeaderIconButtonStyle(isProminent: true))
             .disabled(model.isSwitching)
             .help("添加账号")
         }
-        .padding()
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
     }
 
     private var footer: some View {
@@ -187,6 +212,9 @@ struct MainView: View {
             }
             Spacer()
             Menu {
+                Button("检查更新") { model.softwareUpdater.checkForUpdates() }
+                    .disabled(!model.softwareUpdater.canCheckForUpdates)
+                Divider()
                 Button("官方额度页") { model.openUsagePage() }
                 Button("订阅管理") { model.openBillingPage() }
                 Divider()
@@ -196,7 +224,63 @@ struct MainView: View {
             }
         }
         .font(.caption)
-        .padding()
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(.regularMaterial)
+    }
+}
+
+private enum MainPage: String, CaseIterable, Identifiable {
+    case dashboard
+    case accounts
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .dashboard: "看板"
+        case .accounts: "账号"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .dashboard: "chart.bar.xaxis"
+        case .accounts: "person.2"
+        }
+    }
+}
+
+private struct AppBackdrop: View {
+    var body: some View {
+        LinearGradient(
+            colors: [
+                Color(nsColor: .windowBackgroundColor),
+                Color(nsColor: .controlBackgroundColor).opacity(0.82),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+private struct HeaderIconButtonStyle: ButtonStyle {
+    var isProminent = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(isProminent ? .white : .primary)
+            .frame(width: 30, height: 30)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(isProminent ? Color.accentColor : Color.secondary.opacity(configuration.isPressed ? 0.16 : 0.09))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(Color.white.opacity(isProminent ? 0.25 : 0.10), lineWidth: 1)
+            }
+            .opacity(configuration.isPressed ? 0.78 : 1)
     }
 }
 
@@ -220,6 +304,260 @@ private struct StatusBanner: View {
         }
         .padding(10)
         .background(.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct DashboardView: View {
+    let profiles: [CodexProfile]
+    let quotas: [UUID: QuotaSnapshot]
+
+    private var stats: QuotaDashboardStats {
+        QuotaDashboardStats(profiles: profiles, quotas: quotas)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("额度看板")
+                        .font(.title3.weight(.semibold))
+                    Text("汇总所有已读取额度的账号，百分比按每个账号 100% 窗口累加。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                StatusPill(
+                    title: stats.staleCount == 0 ? "数据正常" : "\(stats.staleCount) 个缓存",
+                    color: stats.staleCount == 0 ? .green : .orange,
+                    icon: stats.staleCount == 0 ? "checkmark.seal" : "exclamationmark.triangle"
+                )
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 236), spacing: 10)], spacing: 10) {
+                DashboardMetricCard(
+                    title: "总周额度",
+                    value: stats.weeklyRemainingText,
+                    subtitle: stats.weeklyCoverageText,
+                    icon: "calendar",
+                    color: .indigo,
+                    progress: stats.weeklyProgress
+                )
+                DashboardMetricCard(
+                    title: "总 5 小时额度",
+                    value: stats.primaryRemainingText,
+                    subtitle: stats.primaryCoverageText,
+                    icon: "timer",
+                    color: .teal,
+                    progress: stats.primaryProgress
+                )
+                DashboardMetricCard(
+                    title: "最近周额度重置",
+                    value: stats.nextWeeklyResetText,
+                    subtitle: "所有账号中最早到来的 weekly reset",
+                    icon: "calendar.badge.clock",
+                    color: .purple,
+                    progress: nil
+                )
+                DashboardMetricCard(
+                    title: "最近 5 小时重置",
+                    value: stats.nextPrimaryResetText,
+                    subtitle: "所有账号中最早到来的 5h reset",
+                    icon: "clock.arrow.circlepath",
+                    color: .blue,
+                    progress: nil
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Label("刷新状态", systemImage: "arrow.clockwise.circle")
+                        .font(.headline)
+                    Spacer()
+                    Text(stats.latestFetchText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Divider().opacity(0.45)
+                DashboardRefreshRow(title: "已绑定账号", value: "\(stats.boundCount) / \(profiles.count)")
+                DashboardRefreshRow(title: "有额度快照", value: "\(stats.quotaCount) / \(profiles.count)")
+                DashboardRefreshRow(title: "最近成功读取", value: stats.latestSuccessfulFetchText)
+                DashboardRefreshRow(title: "需要关注", value: stats.attentionText, valueColor: stats.staleCount == 0 ? .secondary : .orange)
+            }
+            .padding(12)
+            .background(.background.opacity(0.92), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
+            }
+        }
+    }
+}
+
+private struct DashboardMetricCard: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let progress: Double?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.headline)
+                    .foregroundStyle(color)
+                    .frame(width: 28, height: 28)
+                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            Text(value)
+                .font(.system(.title2, design: .rounded).weight(.bold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            if let progress {
+                ProgressView(value: progress, total: 1)
+                    .tint(color)
+            }
+            Text(subtitle)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+        .background(.background.opacity(0.92), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(color.opacity(0.18), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
+    }
+}
+
+private struct DashboardRefreshRow: View {
+    let title: String
+    let value: String
+    var valueColor: Color = .secondary
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(valueColor)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+}
+
+private struct QuotaDashboardStats {
+    let profiles: [CodexProfile]
+    let quotas: [UUID: QuotaSnapshot]
+
+    var quotaSnapshots: [QuotaSnapshot] {
+        profiles.compactMap { quotas[$0.id] }
+    }
+
+    var boundCount: Int {
+        profiles.filter { $0.accountEmail != nil }.count
+    }
+
+    var quotaCount: Int {
+        quotaSnapshots.count
+    }
+
+    var staleCount: Int {
+        quotaSnapshots.filter(\.stale).count
+    }
+
+    var weeklyWindows: [RateLimitWindow] {
+        quotaSnapshots.compactMap(\.secondary)
+    }
+
+    var primaryWindows: [RateLimitWindow] {
+        quotaSnapshots.compactMap(\.primary)
+    }
+
+    var weeklyRemainingText: String {
+        aggregateText(for: weeklyWindows)
+    }
+
+    var primaryRemainingText: String {
+        aggregateText(for: primaryWindows)
+    }
+
+    var weeklyCoverageText: String {
+        coverageText(weeklyWindows.count, label: "周额度")
+    }
+
+    var primaryCoverageText: String {
+        coverageText(primaryWindows.count, label: "5 小时额度")
+    }
+
+    var weeklyProgress: Double? {
+        aggregateProgress(for: weeklyWindows)
+    }
+
+    var primaryProgress: Double? {
+        aggregateProgress(for: primaryWindows)
+    }
+
+    var nextWeeklyResetText: String {
+        nearestResetText(for: weeklyWindows)
+    }
+
+    var nextPrimaryResetText: String {
+        nearestResetText(for: primaryWindows)
+    }
+
+    var latestFetchText: String {
+        guard let latest = quotaSnapshots.map(\.fetchedAt).max() else { return "尚未刷新" }
+        return "最近刷新 \(latest.formatted(date: .abbreviated, time: .shortened))"
+    }
+
+    var latestSuccessfulFetchText: String {
+        let successful = quotaSnapshots.filter { !$0.stale }
+        guard let latest = successful.map(\.fetchedAt).max() else { return "暂无成功记录" }
+        return latest.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    var attentionText: String {
+        if staleCount == 0 { return "暂无异常" }
+        return "\(staleCount) 个账号显示缓存额度"
+    }
+
+    private func aggregateText(for windows: [RateLimitWindow]) -> String {
+        guard !windows.isEmpty else { return "未知" }
+        let remaining = windows.map(\.remainingPercent).reduce(0, +)
+        return "\(remaining)% / \(windows.count * 100)%"
+    }
+
+    private func aggregateProgress(for windows: [RateLimitWindow]) -> Double? {
+        guard !windows.isEmpty else { return nil }
+        let remaining = windows.map(\.remainingPercent).reduce(0, +)
+        return Double(remaining) / Double(windows.count * 100)
+    }
+
+    private func coverageText(_ count: Int, label: String) -> String {
+        if count == 0 { return "还没有可统计的\(label)快照" }
+        return "覆盖 \(count) 个账号，剩余值按账号窗口累加"
+    }
+
+    private func nearestResetText(for windows: [RateLimitWindow]) -> String {
+        let now = Date()
+        guard let date = windows.compactMap(\.resetDate).filter({ $0 >= now }).min()
+                ?? windows.compactMap(\.resetDate).min() else {
+            return "未知"
+        }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 }
 
@@ -259,23 +597,30 @@ private struct ProfileCard: View {
                 .background(.green.opacity(0.10), in: RoundedRectangle(cornerRadius: 7))
             }
 
-            HStack {
-                Circle().fill(Color(hex: profile.colorHex)).frame(width: 10, height: 10)
-                Text(profile.displayName)
-                    .font(.headline)
-                    .lineLimit(1)
-                if isActive {
-                    Text("当前")
-                        .font(.caption2.bold())
-                        .foregroundStyle(.green)
+            HStack(alignment: .top, spacing: 12) {
+                ProfileAvatar(profile: profile, isActive: isActive)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 7) {
+                        Text(profile.displayName)
+                            .font(.headline.weight(.semibold))
+                            .lineLimit(1)
+                        if isActive {
+                            Text("当前启动")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.green)
+                        }
+                    }
+                    HStack(spacing: 8) {
+                        StatusPill(title: loginState.title, color: loginState.color, icon: loginState.icon)
+                        Text(quota?.planType?.uppercased() ?? "未登录")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                Text(loginState.title)
-                    .font(.caption2.bold())
-                    .foregroundStyle(loginState.color)
-                Spacer()
-                Text(quota?.planType?.uppercased() ?? "未登录")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                if let remaining = quota?.lowestRemainingPercent {
+                    QuotaGauge(value: remaining)
+                }
             }
 
             if let alias = profile.alias {
@@ -327,11 +672,15 @@ private struct ProfileCard: View {
                 .help("修改默认切换模式")
             }
             .padding(10)
-            .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+            .background(.quaternary.opacity(0.36), in: RoundedRectangle(cornerRadius: 8))
 
             if let quota {
-                QuotaRow(label: "5 小时", window: quota.primary)
-                QuotaRow(label: "每周", window: quota.secondary)
+                VStack(spacing: 8) {
+                    QuotaRow(label: "5 小时额度", window: quota.primary, resetStyle: .primary)
+                    QuotaRow(label: "周额度", window: quota.secondary, resetStyle: .weekly)
+                }
+                .padding(10)
+                .background(Color.secondary.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
                 HStack {
                     Text("额外额度")
                     Spacer()
@@ -371,22 +720,22 @@ private struct ProfileCard: View {
             .font(.caption)
         }
         .padding(14)
-        .background(.background, in: RoundedRectangle(cornerRadius: 8))
+        .background(.background.opacity(0.92), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(isActive ? Color.green.opacity(0.55) : Color.secondary.opacity(0.18), lineWidth: isActive ? 1.5 : 1)
         }
-        .shadow(color: .black.opacity(0.05), radius: 4, y: 1)
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
     }
 
-    private var loginState: (title: String, color: Color) {
-        guard profile.isLoggedIn else { return ("未完成登录", .orange) }
+    private var loginState: (title: String, color: Color, icon: String) {
+        guard profile.isLoggedIn else { return ("未完成登录", .orange, "exclamationmark.circle") }
         if quota?.stale == true,
            quota?.errorMessage?.localizedCaseInsensitiveContains("登录") == true {
-            return ("登录已失效", .red)
+            return ("登录已失效", .red, "xmark.octagon")
         }
-        if profile.accountEmail != nil { return ("已绑定", .green) }
-        return ("待验证", .orange)
+        if profile.accountEmail != nil { return ("已绑定", .green, "checkmark.seal") }
+        return ("待验证", .orange, "link.badge.plus")
     }
 
     @ViewBuilder
@@ -405,6 +754,75 @@ private struct ProfileCard: View {
             }
         }
         .font(.caption2)
+    }
+}
+
+private struct ProfileAvatar: View {
+    let profile: CodexProfile
+    let isActive: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(hex: profile.colorHex).opacity(0.95), Color(hex: profile.colorHex).opacity(0.55)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            Text(initial)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+        }
+        .frame(width: 42, height: 42)
+        .overlay(alignment: .bottomTrailing) {
+            if isActive {
+                Circle()
+                    .fill(.green)
+                    .frame(width: 12, height: 12)
+                    .overlay {
+                        Circle().stroke(Color(nsColor: .windowBackgroundColor), lineWidth: 2)
+                    }
+                    .offset(x: 2, y: 2)
+            }
+        }
+        .frame(width: 44, height: 44)
+    }
+
+    private var initial: String {
+        String(profile.displayName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1)).uppercased()
+    }
+}
+
+private struct StatusPill: View {
+    let title: String
+    let color: Color
+    let icon: String
+
+    var body: some View {
+        Label(title, systemImage: icon)
+            .font(.caption2.bold())
+            .foregroundStyle(color)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+}
+
+private struct QuotaGauge: View {
+    let value: Int
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text("\(value)%")
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .monospacedDigit()
+            Text("最低剩余")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 66)
     }
 }
 
@@ -449,22 +867,55 @@ private struct RenewalSummary: View {
     }
 }
 
+private enum QuotaWindowStyle {
+    case primary
+    case weekly
+
+    var description: String {
+        switch self {
+        case .primary:
+            "短周期窗口，适合判断现在还能不能继续密集使用。"
+        case .weekly:
+            "长周期窗口，适合判断本周整体账号池还剩多少。"
+        }
+    }
+}
+
 private struct QuotaRow: View {
     let label: String
     let window: RateLimitWindow?
+    let resetStyle: QuotaWindowStyle
 
     var body: some View {
-        HStack {
-            Text(label).frame(width: 55, alignment: .leading)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                Image(systemName: "info.circle")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .help(resetStyle.description)
+                Spacer()
+                Text(window.map { "剩余 \($0.remainingPercent)%" } ?? "剩余未知")
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                Text(resetText)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
             ProgressView(value: Double(window?.remainingPercent ?? 0), total: 100)
-            Text(window.map { "\($0.remainingPercent)%" } ?? "未知")
-                .monospacedDigit()
-                .frame(width: 38, alignment: .trailing)
-            Text(window?.resetDate?.formatted(date: .omitted, time: .shortened) ?? "")
-                .frame(width: 64, alignment: .trailing)
+            Text(resetStyle.description)
+                .font(.caption2)
                 .foregroundStyle(.secondary)
+                .lineLimit(2)
         }
-        .font(.caption)
+    }
+
+    private var resetText: String {
+        guard let date = window?.resetDate else { return "" }
+        return "重置 \(date.formatted(date: .abbreviated, time: .shortened))"
     }
 }
 
@@ -884,7 +1335,7 @@ struct SettingsView: View {
 
 private enum AppVersion {
     static var current: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.2"
     }
 }
 
@@ -892,28 +1343,102 @@ private struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("如何配置两个账号").font(.title2.bold())
-            Group {
-                Text("1. 点击主界面右上角的 +，可填写辅助备注，然后点击“创建并登录”。")
-                Text("2. 终端会运行官方 codex login；如果没有打开，直接在终端粘贴剪贴板里的命令。")
-                Text("3. 回到本应用点击“刷新额度”，软件会绑定并显示真实 Codex 登录账号。")
-                Text("4. 再次点击 +，使用第二个 ChatGPT Plus 账号完成登录。")
-                Text("5. 刷新第二个账号，确认两个 Profile 绑定的是不同的真实 Codex 账号。")
-                Text("6. 日常切换时点击目标账号的“切换”，选择切换模式；不确定时先点“模拟预检”。如果当前账号有运行中任务，软件会阻止切换。")
-            }
-            .font(.body)
-            Divider()
-            Text("提示：浏览器可能自动使用当前 ChatGPT 登录状态。配置第二个账号时，请先在浏览器确认或切换到第二个账号，再完成授权。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        VStack(spacing: 0) {
             HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("使用说明").font(.title2.bold())
+                    Text("账号配置、额度显示、切换模式与常见问题")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
-                Button("知道了") { dismiss() }
+                Button("完成") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(22)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HelpSection(title: "快速上手", icon: "bolt.circle") {
+                        HelpStep(number: 1, text: "点击右上角 +，填写可选备注和续费日，然后选择“创建并登录”。")
+                        HelpStep(number: 2, text: "在官方 codex login 授权完成后，回到本应用刷新额度。")
+                        HelpStep(number: 3, text: "确认卡片显示真实邮箱和“已绑定”，再添加第二个账号。")
+                        HelpStep(number: 4, text: "切换前可先点“模拟预检”，应用会检查认证、运行中任务和状态准备。")
+                    }
+
+                    HelpSection(title: "切换模式怎么选", icon: "rectangle.2.swap") {
+                        HelpTip(title: "完全独立", text: "账号、项目、对话和配置都隔离。适合需要清晰边界的工作账号。")
+                        HelpTip(title: "共享状态", text: "多个账号使用同一套本地项目和线程状态。适合临时接续上下文，但远程线程能否复用仍取决于 Codex。")
+                        HelpTip(title: "部分共享", text: "账号和对话独立，只同步工具、skills、prompts 等配置。多数日常场景更稳。")
+                    }
+
+                    HelpSection(title: "常见问题", icon: "questionmark.circle") {
+                        HelpTip(title: "为什么浏览器授权到了旧账号？", text: "浏览器会沿用当前 ChatGPT 登录状态。添加新账号前，先在浏览器切换到目标账号。")
+                        HelpTip(title: "当前启动标记会不会错？", text: "应用会定时读取 Codex 运行环境中的真实账号邮箱；发现错标会自动校正，无法匹配时会清除标记。")
+                        HelpTip(title: "看板里的总额度怎么算？", text: "Codex 返回的是百分比；看板按每个账号窗口 100% 累加，方便观察账号池整体剩余量。")
+                        HelpTip(title: "每周额度后面的时间是什么？", text: "这是 secondary rate-limit 的重置日期和时间；5 小时额度与周额度都会显示完整重置时间。")
+                        HelpTip(title: "切换被阻止怎么办？", text: "通常是检测到运行中任务，或无法确认任务状态。等任务结束后再切换，避免丢失上下文。")
+                    }
+                }
+                .padding(22)
             }
         }
-        .padding(24)
-        .frame(width: 560)
+        .frame(width: 640, height: 620)
+    }
+}
+
+private struct HelpSection<Content: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+            VStack(alignment: .leading, spacing: 8) {
+                content
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.quaternary.opacity(0.32), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+    }
+}
+
+private struct HelpStep: View {
+    let number: Int
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text("\(number)")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(Color.accentColor, in: Circle())
+            Text(text)
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct HelpTip: View {
+    let title: String
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.subheadline.bold())
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

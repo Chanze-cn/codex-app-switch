@@ -18,11 +18,14 @@ final class AppModel: ObservableObject {
     @Published var operationLogs: [OperationLogEntry] = []
 
     let store = ProfileStore()
+    let softwareUpdater = SoftwareUpdateController()
     private let appServer = CodexAppServerClient()
     private let launcher = CodexLauncher()
     private let stateCoordinator = CodexStateCoordinator()
     private let reminderService = RenewalReminderService()
     private var refreshTask: Task<Void, Never>?
+    private var activeAccountCheckTask: Task<Void, Never>?
+    private var isCheckingActiveAccount = false
 
     init() {
         OperationLogger.info("app.started", message: "Codex Profile Manager started")
@@ -32,10 +35,17 @@ final class AppModel: ObservableObject {
                 try? await Task.sleep(for: .seconds(300))
             }
         }
+        activeAccountCheckTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.verifyActiveRuntimeAccount()
+                try? await Task.sleep(for: .seconds(60))
+            }
+        }
     }
 
     deinit {
         refreshTask?.cancel()
+        activeAccountCheckTask?.cancel()
     }
 
     var menuBarLabel: String {
@@ -393,6 +403,69 @@ final class AppModel: ObservableObject {
     private func profileForAccountRequest(_ profile: CodexProfile) -> CodexProfile {
         guard store.activeProfileID == profile.id else { return profile }
         return effectiveProfile(profile, mode: store.activeRuntimeMode)
+    }
+
+    private func verifyActiveRuntimeAccount() async {
+        guard !isCheckingActiveAccount, !isSwitching else { return }
+        guard let active = store.activeProfile else { return }
+        guard launcher.isDesktopRunning() else { return }
+        isCheckingActiveAccount = true
+        defer { isCheckingActiveAccount = false }
+
+        let runtimeMode = store.activeRuntimeMode
+        let requestProfile = effectiveProfile(active, mode: runtimeMode)
+        do {
+            let email = try await appServer.validateAuthentication(profile: requestProfile)
+            try reconcileActiveRuntime(email: email, previous: active, runtimeMode: runtimeMode)
+        } catch {
+            OperationLogger.warning(
+                "activeAccount.check.failed",
+                profile: active,
+                message: "Could not verify active runtime account",
+                metadata: ["mode": runtimeMode.rawValue],
+                error: error
+            )
+        }
+    }
+
+    private func reconcileActiveRuntime(email: String?, previous: CodexProfile, runtimeMode: CodexSwitchMode) throws {
+        guard let normalized = email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !normalized.isEmpty else { return }
+        if previous.accountEmail?.caseInsensitiveCompare(normalized) == .orderedSame {
+            return
+        }
+        if previous.accountEmail == nil {
+            try store.bindCodexAccount(email: normalized, to: previous.id)
+            statusMessage = "已确认当前启动账号：\(normalized)。"
+            OperationLogger.info(
+                "activeAccount.bound",
+                profile: previous,
+                message: "Bound active profile from runtime account check",
+                metadata: ["accountEmail": normalized, "mode": runtimeMode.rawValue]
+            )
+            return
+        }
+        if let matching = store.profiles.first(where: {
+            $0.accountEmail?.caseInsensitiveCompare(normalized) == .orderedSame
+        }) {
+            try store.markActive(matching.id, runtimeMode: runtimeMode)
+            statusMessage = "已校正当前启动账号：检测到 Codex 正在使用 \(matching.displayName)。"
+            OperationLogger.warning(
+                "activeAccount.corrected",
+                profile: matching,
+                message: "Corrected active profile marker from runtime account",
+                metadata: ["previousProfile": previous.displayName, "accountEmail": normalized, "mode": runtimeMode.rawValue]
+            )
+        } else {
+            store.clearActiveProfile()
+            statusMessage = "当前 Codex Desktop 登录的是未绑定账号 \(normalized)，已清除当前启动标记。"
+            OperationLogger.warning(
+                "activeAccount.unbound",
+                profile: previous,
+                message: "Cleared active marker because runtime account is not bound",
+                metadata: ["accountEmail": normalized, "mode": runtimeMode.rawValue]
+            )
+        }
     }
 
     func updateRenewal(profile: CodexProfile, day: Int?, reminderDays: [Int]) async {

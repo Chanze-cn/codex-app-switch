@@ -2,7 +2,7 @@
 
 Codex Profile Manager uses a conservative SemVer-style version policy.
 
-Current version: `0.2.1`
+Current version: `0.3.2`
 
 ## Source of Truth
 
@@ -28,7 +28,7 @@ Examples:
 
 - `0.1.0`
 - `0.1.1`
-- `0.2.1`
+- `0.2.0`
 - `1.0.0`
 
 ## Bump Rules
@@ -41,15 +41,16 @@ Use a patch release for:
 - safe UI copy adjustments;
 - packaging fixes;
 - documentation corrections that are shipped with a release;
-- small internal improvements that do not change user workflows.
+- small internal improvements that do not change user workflows;
+- incremental UI/dashboard/help iterations that refine existing account-management workflows.
 
 ### Minor: `0.2.1` -> `0.3.0`
 
 Use a minor release for:
 
-- a new user-facing feature;
+- a substantial new user-facing feature;
 - a new switch mode or account-management workflow;
-- a meaningful UI flow change;
+- a meaningful UI flow change that changes how users complete a workflow;
 - a new supported platform/runtime requirement;
 - changes that alter expected behavior but remain compatible with existing local data.
 
