@@ -6,11 +6,21 @@ Releases for hosting update archives and the Sparkle appcast.
 ## Runtime Flow
 
 1. The app reads `SUFeedURL` from `Support/Info.plist`.
-2. The user chooses `更多 -> 检查更新`.
-3. Sparkle downloads `appcast.xml` from GitHub Releases.
-4. Sparkle verifies the update archive with the `SUPublicEDKey` embedded in the
+2. Shortly after launch, the app performs a Sparkle probing check with
+   `checkForUpdateInformation()`. This discovers version information without
+   showing an update window or installing anything.
+3. If a newer version is found, the main window shows an update banner and the
+   `更多` menu shows an `更新到 <version>` action.
+4. When the user clicks the update action, Sparkle opens its standard update
+   window and downloads `appcast.xml` from GitHub Releases.
+5. Sparkle verifies the update archive with the `SUPublicEDKey` embedded in the
    app.
-5. Sparkle installs the new app bundle and relaunches the app.
+6. Sparkle installs the new app bundle and relaunches the app after user
+   confirmation.
+
+The app intentionally keeps automatic download and automatic install disabled.
+Startup checks are informational only; the user remains in control of the
+download, installation, and restart.
 
 ## Release Flow
 

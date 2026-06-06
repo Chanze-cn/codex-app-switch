@@ -6,6 +6,17 @@ This project follows the versioning policy in [docs/VERSIONING.md](docs/VERSIONI
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-06-06
+
+### Added
+
+- Added launch-time update probing with an in-app update banner when a newer GitHub Release is available.
+- Added clearer update actions in the `更多` menu, including direct `更新到 <version>` entry when an update has been detected.
+
+### Changed
+
+- Documented the auto-update UX as informational startup checks plus user-confirmed Sparkle installation.
+
 ## [0.3.5] - 2026-06-06
 
 ### Fixed

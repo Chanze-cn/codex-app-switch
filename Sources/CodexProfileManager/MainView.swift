@@ -3,11 +3,13 @@ import SwiftUI
 struct MainView: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var store: ProfileStore
+    @ObservedObject private var updater: SoftwareUpdateController
     @State private var selectedPage: MainPage = .dashboard
 
     init(model: AppModel) {
         self.model = model
         store = model.store
+        updater = model.softwareUpdater
     }
 
     var body: some View {
@@ -64,6 +66,13 @@ struct MainView: View {
                             StatusBanner(message: statusMessage) {
                                 model.statusMessage = nil
                             }
+                        }
+                        if let update = updater.visibleAvailableUpdate {
+                            SoftwareUpdateBanner(
+                                update: update,
+                                install: { updater.checkForUpdates() },
+                                dismiss: { updater.dismissAvailableUpdate() }
+                            )
                         }
                         if selectedPage == .dashboard {
                             DashboardView(profiles: store.profiles, quotas: store.quotas)
@@ -135,7 +144,10 @@ struct MainView: View {
         } message: {
             Text(model.errorMessage ?? "")
         }
-        .task { await model.refreshAll() }
+        .task {
+            await model.refreshAll()
+            updater.startLaunchUpdateCheck()
+        }
     }
 
     private var header: some View {
@@ -212,8 +224,27 @@ struct MainView: View {
             }
             Spacer()
             Menu {
-                Button("检查更新") { model.softwareUpdater.checkForUpdates() }
-                    .disabled(!model.softwareUpdater.canCheckForUpdates)
+                if let update = updater.availableUpdate {
+                    Button {
+                        updater.checkForUpdates()
+                    } label: {
+                        Label("更新到 \(update.version)", systemImage: "arrow.down.app")
+                    }
+                    Divider()
+                }
+                Button {
+                    updater.probeForUpdates()
+                } label: {
+                    Label(updater.isCheckingForUpdate ? "正在检查更新" : "检测新版本", systemImage: "magnifyingglass")
+                }
+                .disabled(!updater.canCheckForUpdates || updater.isCheckingForUpdate)
+                Button {
+                    updater.checkForUpdates()
+                } label: {
+                    Label("打开更新窗口", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(!updater.canCheckForUpdates)
+                Text(updater.statusText)
                 Divider()
                 Button("官方额度页") { model.openUsagePage() }
                 Button("订阅管理") { model.openBillingPage() }
@@ -304,6 +335,52 @@ private struct StatusBanner: View {
         }
         .padding(10)
         .background(.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct SoftwareUpdateBanner: View {
+    let update: AvailableSoftwareUpdate
+    let install: () -> Void
+    let dismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.app.fill")
+                .font(.title3)
+                .foregroundStyle(.blue)
+                .frame(width: 34, height: 34)
+                .background(.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("发现新版本 \(update.version)")
+                    .font(.headline.weight(.semibold))
+                Text("已自动检测到可用更新，点击后会打开标准更新窗口，并在安装前确认是否重启。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 12)
+
+            Text(update.discoveredAt.formatted(date: .omitted, time: .shortened))
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+
+            Button("稍后", action: dismiss)
+                .font(.caption)
+            Button(action: install) {
+                Label("立即更新", systemImage: "arrow.down.circle")
+            }
+            .font(.caption.weight(.semibold))
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(12)
+        .background(.background.opacity(0.96), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(.blue.opacity(0.25), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
     }
 }
 
@@ -1335,7 +1412,7 @@ struct SettingsView: View {
 
 private enum AppVersion {
     static var current: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.5"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.6"
     }
 }
 
@@ -1379,6 +1456,7 @@ private struct HelpView: View {
                         HelpTip(title: "当前启动标记会不会错？", text: "应用会定时读取 Codex 运行环境中的真实账号邮箱；发现错标会自动校正，无法匹配时会清除标记。")
                         HelpTip(title: "看板里的总额度怎么算？", text: "Codex 返回的是百分比；看板按每个账号窗口 100% 累加，方便观察账号池整体剩余量。")
                         HelpTip(title: "每周额度后面的时间是什么？", text: "这是 secondary rate-limit 的重置日期和时间；5 小时额度与周额度都会显示完整重置时间。")
+                        HelpTip(title: "软件会自动升级吗？", text: "启动后会静默检测 GitHub Release 中的新版本；发现后会在主界面和“更多”菜单显示更新入口。点击更新后才会下载、安装，并在重启前确认。")
                         HelpTip(title: "切换被阻止怎么办？", text: "通常是检测到运行中任务，或无法确认任务状态。等任务结束后再切换，避免丢失上下文。")
                     }
                 }
