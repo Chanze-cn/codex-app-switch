@@ -22,7 +22,12 @@ enum AtomicJSONStore {
     static func save<T: Encodable>(_ value: T, to url: URL) throws {
         try AppPaths.ensureDirectories()
         let data = try encoder.encode(value)
-        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try data.write(to: url, options: [.atomic])
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 }

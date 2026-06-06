@@ -74,6 +74,13 @@ let fileManager = FileManager.default
 let testRoot = fileManager.temporaryDirectory.appendingPathComponent("codex-profile-manager-tests-\(UUID().uuidString)", isDirectory: true)
 defer { try? fileManager.removeItem(at: testRoot) }
 
+let quotaCacheURL = testRoot.appendingPathComponent("quota-cache.json")
+try AtomicJSONStore.save([UUID(): snapshot], to: quotaCacheURL)
+expect(fileManager.fileExists(atPath: quotaCacheURL.path), "atomic JSON save should create quota cache file")
+let quotaAttributes = try fileManager.attributesOfItem(atPath: quotaCacheURL.path)
+let quotaPermissions = (quotaAttributes[.posixPermissions] as? NSNumber)?.intValue ?? 0
+expect(quotaPermissions & 0o777 == 0o600, "atomic JSON save should restrict cache file permissions")
+
 func writeFile(_ path: URL, _ content: String) throws {
     try fileManager.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     try Data(content.utf8).write(to: path)

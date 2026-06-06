@@ -16,4 +16,6 @@ swiftc \
   "$ROOT/Sources/CodexProfileManager/RenewalReminderService.swift" \
   "$ROOT/Tests/SelfTests/main.swift" \
   -o "$OUT"
-CODEX_PROFILE_MANAGER_DISABLE_LOGS=1 "$OUT"
+CODEX_PROFILE_MANAGER_DISABLE_LOGS=1 \
+CODEX_PROFILE_MANAGER_ROOT="$OUT-root" \
+"$OUT"
