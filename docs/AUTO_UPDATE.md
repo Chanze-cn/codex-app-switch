@@ -65,3 +65,17 @@ for development testing, but that is not recommended for broad distribution.
 Do not bump versions automatically after an implementation task. First confirm
 the intended version with the maintainer. After confirmation, update version
 metadata, commit, push, and tag.
+
+## Required Local Launch Verification
+
+Before pushing a release tag, package the app and verify the app launches
+successfully from the generated bundle:
+
+```sh
+Scripts/package_app.sh
+Build/CodexProfileManager.app/Contents/MacOS/CodexProfileManager
+open -n Build/CodexProfileManager.app
+```
+
+This catches embedded framework, rpath, signing, and dynamic loader problems
+before GitHub Actions publishes the release assets.

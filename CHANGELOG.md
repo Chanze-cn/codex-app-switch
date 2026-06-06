@@ -6,6 +6,12 @@ This project follows the versioning policy in [docs/VERSIONING.md](docs/VERSIONI
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-06-06
+
+### Fixed
+
+- Fixed local ad-hoc packaged apps failing to launch after Sparkle integration because hardened runtime library validation rejected the embedded Sparkle framework signature.
+
 ## [0.3.2] - 2026-06-06
 
 ### Added

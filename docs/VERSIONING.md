@@ -2,7 +2,7 @@
 
 Codex Profile Manager uses a conservative SemVer-style version policy.
 
-Current version: `0.3.2`
+Current version: `0.3.3`
 
 ## Source of Truth
 
@@ -84,24 +84,32 @@ While the project is below `1.0.0`:
    swift build
    ```
 
-3. Update `VERSION`.
-4. Update `Support/Info.plist`.
-5. Increment `CFBundleVersion`.
-6. Update client info version in `CodexAppServerClient.swift` if needed.
-7. Update `CHANGELOG.md`.
-8. Commit with:
+3. Package and verify the app can launch:
+
+   ```sh
+   Scripts/package_app.sh
+   Build/CodexProfileManager.app/Contents/MacOS/CodexProfileManager
+   open -n Build/CodexProfileManager.app
+   ```
+
+4. Update `VERSION`.
+5. Update `Support/Info.plist`.
+6. Increment `CFBundleVersion`.
+7. Update client info version in `CodexAppServerClient.swift` if needed.
+8. Update `CHANGELOG.md`.
+9. Commit with:
 
    ```text
    Release vX.Y.Z
    ```
 
-9. Tag the release:
+10. Tag the release:
 
    ```sh
    git tag -a vX.Y.Z -m "Release vX.Y.Z"
    ```
 
-10. Push branch and tag:
+11. Push branch and tag:
 
    ```sh
    git push

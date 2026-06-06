@@ -5,6 +5,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="$ROOT/Build/CodexProfileManager.app"
 SPARKLE_FRAMEWORK="$ROOT/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
 SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
+SIGN_OPTIONS=""
+if [ "$SIGN_IDENTITY" != "-" ]; then
+    SIGN_OPTIONS="--options runtime"
+fi
 
 swift build -c release
 "$ROOT/Scripts/generate_icon.swift" "$ROOT/Support/AppIcon.icns"
@@ -22,5 +26,6 @@ else
     echo "Missing Sparkle.framework. Run: swift package resolve" >&2
     exit 1
 fi
-codesign --force --deep --options runtime --sign "$SIGN_IDENTITY" "$BUILD"
+codesign --force --deep $SIGN_OPTIONS --sign "$SIGN_IDENTITY" "$BUILD/Contents/Frameworks/Sparkle.framework"
+codesign --force --deep $SIGN_OPTIONS --sign "$SIGN_IDENTITY" "$BUILD"
 echo "Built $BUILD"
