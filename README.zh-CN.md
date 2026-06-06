@@ -255,5 +255,4 @@ swift build
 
 ## 许可证
 
-当前尚未选择许可证。如果你希望他人可以明确地使用、修改或再分发本项目，请在发布前
-添加 `LICENSE` 文件。
+本项目使用 MIT License。详情请查看 [LICENSE](LICENSE)。

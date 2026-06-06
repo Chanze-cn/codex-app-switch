@@ -280,5 +280,5 @@ For questions, bug reports, or private feedback, contact:
 
 ## License
 
-No license has been selected yet. Add a `LICENSE` file before publishing if you
-want others to use, modify, or redistribute the project under explicit terms.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for
+details.
