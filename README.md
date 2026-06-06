@@ -66,6 +66,13 @@ This app focuses on three practical goals:
 - Official `codex` CLI available in `PATH`, `/opt/homebrew/bin`, or
   `/usr/local/bin`.
 
+## Project Governance
+
+- Current version: [`0.2.0`](VERSION)
+- Version policy: [docs/VERSIONING.md](docs/VERSIONING.md)
+- Branching and contribution workflow: [docs/BRANCHING.md](docs/BRANCHING.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+
 ## Build
 
 Run the self-tests:

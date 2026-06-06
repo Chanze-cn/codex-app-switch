@@ -81,6 +81,26 @@ let quotaAttributes = try fileManager.attributesOfItem(atPath: quotaCacheURL.pat
 let quotaPermissions = (quotaAttributes[.posixPermissions] as? NSNumber)?.intValue ?? 0
 expect(quotaPermissions & 0o777 == 0o600, "atomic JSON save should restrict cache file permissions")
 
+let lowQuotaProfile = CodexProfile(id: UUID(), name: "current", codexHome: "/tmp/current")
+let highQuotaProfile = CodexProfile(id: UUID(), name: "backup", codexHome: "/tmp/backup")
+let sortedProfiles = ProfileStore.sortedProfiles(
+    [highQuotaProfile, lowQuotaProfile],
+    activeProfileID: lowQuotaProfile.id,
+    quotas: [
+        lowQuotaProfile.id: QuotaSnapshot(
+            primary: RateLimitWindow(usedPercent: 95, windowDurationMins: nil, resetsAt: nil),
+            fetchedAt: Date(),
+            stale: false
+        ),
+        highQuotaProfile.id: QuotaSnapshot(
+            primary: RateLimitWindow(usedPercent: 5, windowDurationMins: nil, resetsAt: nil),
+            fetchedAt: Date(),
+            stale: false
+        ),
+    ]
+)
+expect(sortedProfiles.first?.id == lowQuotaProfile.id, "active profile should stay pinned above higher-quota profiles")
+
 func writeFile(_ path: URL, _ content: String) throws {
     try fileManager.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     try Data(content.utf8).write(to: path)

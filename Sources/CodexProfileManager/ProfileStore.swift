@@ -182,7 +182,17 @@ final class ProfileStore: ObservableObject {
     }
 
     var sortedProfiles: [CodexProfile] {
+        Self.sortedProfiles(profiles, activeProfileID: activeProfileID, quotas: quotas)
+    }
+
+    nonisolated static func sortedProfiles(
+        _ profiles: [CodexProfile],
+        activeProfileID: UUID?,
+        quotas: [UUID: QuotaSnapshot]
+    ) -> [CodexProfile] {
         profiles.sorted {
+            if $0.id == activeProfileID { return true }
+            if $1.id == activeProfileID { return false }
             let left = quotas[$0.id]?.lowestRemainingPercent ?? -1
             let right = quotas[$1.id]?.lowestRemainingPercent ?? -1
             if left != right { return left > right }

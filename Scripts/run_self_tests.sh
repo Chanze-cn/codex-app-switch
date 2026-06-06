@@ -12,10 +12,12 @@ swiftc \
   "$ROOT/Sources/CodexProfileManager/JSONStore.swift" \
   "$ROOT/Sources/CodexProfileManager/Paths.swift" \
   "$ROOT/Sources/CodexProfileManager/OperationLogger.swift" \
+  "$ROOT/Sources/CodexProfileManager/ProfileStore.swift" \
   "$ROOT/Sources/CodexProfileManager/CodexStateCoordinator.swift" \
   "$ROOT/Sources/CodexProfileManager/RenewalReminderService.swift" \
   "$ROOT/Tests/SelfTests/main.swift" \
   -o "$OUT"
+TEST_ROOT="$OUT-root-$$"
 CODEX_PROFILE_MANAGER_DISABLE_LOGS=1 \
-CODEX_PROFILE_MANAGER_ROOT="$OUT-root" \
+CODEX_PROFILE_MANAGER_ROOT="$TEST_ROOT" \
 "$OUT"

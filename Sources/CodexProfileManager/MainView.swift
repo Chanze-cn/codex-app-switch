@@ -851,11 +851,19 @@ struct SettingsView: View {
         Form {
             Text("Codex 多账号管理器")
                 .font(.headline)
+            Text("版本 \(AppVersion.current)")
+                .foregroundStyle(.secondary)
             Text("账号配置和操作日志保存在本机。登录凭据仍由官方 Codex CLI 管理。")
                 .foregroundStyle(.secondary)
         }
         .padding()
         .frame(width: 420)
+    }
+}
+
+private enum AppVersion {
+    static var current: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
     }
 }
 
