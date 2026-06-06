@@ -11,20 +11,32 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    env:
+      APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+      APPLE_ID_USERNAME: ${{ secrets.APPLE_ID_USERNAME }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate release secrets
+        run: |
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "::error title=Missing SPARKLE_PRIVATE_KEY::Add the Sparkle private key as a repository secret before publishing auto-update releases."
+            exit 1
+          fi
+
       - name: Resolve Swift packages
         run: swift package resolve
 
       - name: Import Developer ID certificate
-        if: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
-        env:
-          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        if: ${{ env.APPLE_CERTIFICATE_BASE64 != '' && env.APPLE_CERTIFICATE_PASSWORD != '' && env.KEYCHAIN_PASSWORD != '' }}
         run: |
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
           CERTIFICATE_PATH="$RUNNER_TEMP/developer-id.p12"
@@ -33,19 +45,16 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security import "$CERTIFICATE_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
 
       - name: Package app
         env:
-          CODE_SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+          CODE_SIGN_IDENTITY: ${{ env.DEVELOPER_ID_APPLICATION }}
         run: Scripts/package_app.sh
 
       - name: Notarize app
-        if: ${{ secrets.APPLE_ID_USERNAME != '' && secrets.APPLE_ID_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
-        env:
-          APPLE_ID_USERNAME: ${{ secrets.APPLE_ID_USERNAME }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        if: ${{ env.APPLE_ID_USERNAME != '' && env.APPLE_ID_PASSWORD != '' && env.APPLE_TEAM_ID != '' }}
         run: |
           ditto -c -k --keepParent Build/CodexProfileManager.app "$RUNNER_TEMP/CodexProfileManager-notary.zip"
           xcrun notarytool submit "$RUNNER_TEMP/CodexProfileManager-notary.zip" \
@@ -56,8 +65,6 @@ jobs:
           xcrun stapler staple Build/CodexProfileManager.app
 
       - name: Create release archive and appcast
-        env:
-          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           ZIP_NAME="CodexProfileManager-$VERSION.zip"

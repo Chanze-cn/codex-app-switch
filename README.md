@@ -68,7 +68,7 @@ This app focuses on three practical goals:
 
 ## Project Governance
 
-- Current version: [`0.3.4`](VERSION)
+- Current version: [`0.3.5`](VERSION)
 - Version policy: [docs/VERSIONING.md](docs/VERSIONING.md)
 - Branching and contribution workflow: [docs/BRANCHING.md](docs/BRANCHING.md)
 - Auto update and release setup: [docs/AUTO_UPDATE.md](docs/AUTO_UPDATE.md)

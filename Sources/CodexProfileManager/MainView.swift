@@ -1335,7 +1335,7 @@ struct SettingsView: View {
 
 private enum AppVersion {
     static var current: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.4"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.5"
     }
 }
 

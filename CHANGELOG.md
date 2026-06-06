@@ -6,6 +6,13 @@ This project follows the versioning policy in [docs/VERSIONING.md](docs/VERSIONI
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-06-06
+
+### Fixed
+
+- Fixed the release workflow secret checks by moving secret values into environment variables before using them in `if:` conditions.
+- Added an explicit `SPARKLE_PRIVATE_KEY` validation step so release failures point to the missing required Sparkle signing secret.
+
 ## [0.3.4] - 2026-06-06
 
 ### Fixed

@@ -2,7 +2,7 @@
 
 Codex Profile Manager uses a conservative SemVer-style version policy.
 
-Current version: `0.3.4`
+Current version: `0.3.5`
 
 ## Source of Truth
 
