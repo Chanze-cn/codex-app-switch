@@ -267,6 +267,15 @@ The self-test script compiles the core model and state-management files into a
 temporary binary and runs behavioral checks without writing to the user's real
 Codex profile data.
 
+## Support and Contact
+
+If this project saves you time, you can support the author by buying a coffee.
+Alipay and WeChat Pay QR codes can be placed under `docs/assets/` and linked
+from this section.
+
+For questions, bug reports, or private feedback, contact:
+[781830133@qq.com](mailto:781830133@qq.com).
+
 ## License
 
 No license has been selected yet. Add a `LICENSE` file before publishing if you
