@@ -54,26 +54,22 @@ struct MainView: View {
                 Divider().opacity(0.55)
             }
             if store.profiles.isEmpty {
-                ContentUnavailableView(
-                    "还没有 Codex 账号",
-                    systemImage: "person.crop.circle.badge.plus",
-                    description: Text("点击右上角 +，创建第一个账号配置并完成官方登录。")
-                )
+                VStack(spacing: 12) {
+                    contentBanners
+                    Spacer()
+                    ContentUnavailableView(
+                        "还没有 Codex 账号",
+                        systemImage: "person.crop.circle.badge.plus",
+                        description: Text("点击右上角 +，创建第一个账号配置并完成官方登录。")
+                    )
+                    Spacer()
+                }
+                .padding(18)
+                .background(AppBackdrop())
             } else {
                 ScrollView {
                     LazyVStack(spacing: 10) {
-                        if let statusMessage = model.statusMessage {
-                            StatusBanner(message: statusMessage) {
-                                model.statusMessage = nil
-                            }
-                        }
-                        if let update = updater.visibleAvailableUpdate {
-                            SoftwareUpdateBanner(
-                                update: update,
-                                install: { updater.checkForUpdates() },
-                                dismiss: { updater.dismissAvailableUpdate() }
-                            )
-                        }
+                        contentBanners
                         if selectedPage == .dashboard {
                             DashboardView(profiles: store.profiles, quotas: store.quotas)
                         } else {
@@ -214,6 +210,27 @@ struct MainView: View {
         .padding(.vertical, 14)
     }
 
+    @ViewBuilder
+    private var contentBanners: some View {
+        if let statusMessage = model.statusMessage {
+            StatusBanner(message: statusMessage) {
+                model.statusMessage = nil
+            }
+        }
+        if let notice = updater.notice {
+            SoftwareUpdateNoticeBanner(notice: notice) {
+                updater.dismissNotice()
+            }
+        }
+        if let update = updater.visibleAvailableUpdate {
+            SoftwareUpdateBanner(
+                update: update,
+                install: { updater.checkForUpdates() },
+                dismiss: { updater.dismissAvailableUpdate() }
+            )
+        }
+    }
+
     private var footer: some View {
         HStack {
             Button { model.showingHelp = true } label: {
@@ -233,7 +250,7 @@ struct MainView: View {
                     Divider()
                 }
                 Button {
-                    updater.probeForUpdates()
+                    updater.probeForUpdates(userInitiated: true)
                 } label: {
                     Label(updater.isCheckingForUpdate ? "正在检查更新" : "检测新版本", systemImage: "magnifyingglass")
                 }
@@ -381,6 +398,66 @@ private struct SoftwareUpdateBanner: View {
                 .stroke(.blue.opacity(0.25), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+    }
+}
+
+private struct SoftwareUpdateNoticeBanner: View {
+    let notice: SoftwareUpdateNotice
+    let dismiss: () -> Void
+
+    private var icon: String {
+        switch notice.kind {
+        case .checking: "magnifyingglass"
+        case .upToDate: "checkmark.seal.fill"
+        case .failed: "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var color: Color {
+        switch notice.kind {
+        case .checking: .blue
+        case .upToDate: .green
+        case .failed: .orange
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if notice.kind == .checking {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 22, height: 22)
+            } else {
+                Image(systemName: icon)
+                    .font(.headline)
+                    .foregroundStyle(color)
+                    .frame(width: 22, height: 22)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(notice.title)
+                    .font(.caption.weight(.semibold))
+                Text(notice.message)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+
+            Button(action: dismiss) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("关闭提示")
+        }
+        .padding(10)
+        .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(color.opacity(0.18), lineWidth: 1)
+        }
     }
 }
 

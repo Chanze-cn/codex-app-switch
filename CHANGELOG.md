@@ -6,6 +6,12 @@ This project follows the versioning policy in [docs/VERSIONING.md](docs/VERSIONI
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-06-07
+
+### Changed
+
+- Added visible feedback for manual update checks, including checking, up-to-date, and failure states.
+
 ## [0.3.7] - 2026-06-07
 
 ### Fixed
