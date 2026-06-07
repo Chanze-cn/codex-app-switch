@@ -112,7 +112,13 @@ final class AppModel: ObservableObject {
         isRefreshing = true
         await withTaskGroup(of: (UUID, Result<QuotaSnapshot, Error>).self) { group in
             for profile in store.profiles {
-                let requestProfile = profileForAccountRequest(profile)
+                let requestProfile: CodexProfile
+                do {
+                    requestProfile = try profileForAccountRequest(profile)
+                } catch {
+                    group.addTask { (profile.id, .failure(error)) }
+                    continue
+                }
                 group.addTask {
                     do { return (profile.id, .success(try await self.appServer.fetchQuota(profile: requestProfile))) }
                     catch { return (profile.id, .failure(error)) }
@@ -142,7 +148,7 @@ final class AppModel: ObservableObject {
         OperationLogger.info("quota.refresh.started", profile: profile, message: "Refreshing quota")
         do {
             try store.validateProfileHome(profile)
-            let snapshot = try await appServer.fetchQuota(profile: profileForAccountRequest(profile))
+            let snapshot = try await appServer.fetchQuota(profile: try profileForAccountRequest(profile))
             try store.bindCodexAccount(email: snapshot.email, to: profile.id)
             try store.setQuota(snapshot, for: profile.id)
             OperationLogger.info("quota.refresh.completed", profile: profile, message: "Quota refresh completed", durationMs: elapsedMs(since: startedAt))
@@ -233,7 +239,7 @@ final class AppModel: ObservableObject {
             guard target.isLoggedIn else {
                 throw SwitchError.targetNotLoggedIn
             }
-            let accountEmail = try await appServer.validateAuthentication(profile: profileForAccountRequest(target))
+            let accountEmail = try await appServer.validateAuthentication(profile: try profileForAccountRequest(target))
             try validateAccountIdentity(email: accountEmail, for: target.id)
             let previous = store.activeProfile
             let previousMode = store.activeRuntimeMode
@@ -303,7 +309,7 @@ final class AppModel: ObservableObject {
             guard target.isLoggedIn else {
                 throw SwitchError.targetNotLoggedIn
             }
-            let accountEmail = try await appServer.validateAuthentication(profile: profileForAccountRequest(target))
+            let accountEmail = try await appServer.validateAuthentication(profile: try profileForAccountRequest(target))
             try store.bindCodexAccount(email: accountEmail, to: target.id)
             if let previous {
                 switchStatus = "正在检查当前账号任务..."
@@ -400,8 +406,11 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func profileForAccountRequest(_ profile: CodexProfile) -> CodexProfile {
+    private func profileForAccountRequest(_ profile: CodexProfile) throws -> CodexProfile {
         guard store.activeProfileID == profile.id else { return profile }
+        if store.activeRuntimeMode == .sharedState {
+            try stateCoordinator.syncAuthToSharedIfProfileIsNewer(profile)
+        }
         return effectiveProfile(profile, mode: store.activeRuntimeMode)
     }
 
@@ -415,6 +424,9 @@ final class AppModel: ObservableObject {
         let runtimeMode = store.activeRuntimeMode
         let requestProfile = effectiveProfile(active, mode: runtimeMode)
         do {
+            if runtimeMode == .sharedState {
+                try stateCoordinator.syncAuthToSharedIfProfileIsNewer(active)
+            }
             let email = try await appServer.validateAuthentication(profile: requestProfile)
             try reconcileActiveRuntime(email: email, previous: active, runtimeMode: runtimeMode)
         } catch {

@@ -120,6 +120,26 @@ struct CodexStateCoordinator {
         )
     }
 
+    func syncAuthToSharedIfProfileIsNewer(_ profile: CodexProfile) throws {
+        let profileHome = URL(fileURLWithPath: profile.codexHome)
+        let profileAuth = profileHome.appendingPathComponent("auth.json")
+        let sharedAuth = paths.sharedCodexHome.appendingPathComponent("auth.json")
+        guard fileManager.fileExists(atPath: profileAuth.path) else { throw StateError.missingTargetAuth }
+
+        let profileModifiedAt = try modificationDate(of: profileAuth)
+        let sharedModifiedAt = try? modificationDate(of: sharedAuth)
+        guard sharedModifiedAt == nil || profileModifiedAt > (sharedModifiedAt ?? .distantPast) else {
+            return
+        }
+
+        OperationLogger.info(
+            "state.shared.syncAuth",
+            profile: profile,
+            message: "Syncing newer profile auth into shared state"
+        )
+        try copyAuth(from: profileHome, to: paths.sharedCodexHome)
+    }
+
     private func captureStateIfNeeded(from profile: CodexProfile, mode: CodexSwitchMode) throws {
         switch mode {
         case .isolated:
@@ -249,6 +269,11 @@ struct CodexStateCoordinator {
         try ensureSecureDirectory(target)
         try replaceItem(named: "auth.json", from: source, to: target)
         try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.appendingPathComponent("auth.json").path)
+    }
+
+    private func modificationDate(of url: URL) throws -> Date {
+        let attributes = try fileManager.attributesOfItem(atPath: url.path)
+        return (attributes[.modificationDate] as? Date) ?? .distantPast
     }
 
     private func replaceItem(named name: String, from source: URL, to target: URL) throws {

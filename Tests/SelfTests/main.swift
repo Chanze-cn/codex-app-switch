@@ -148,6 +148,11 @@ expect(readFile(sharedPaths.sharedCodexHome.appendingPathComponent("auth.json"))
 expect(readFile(sharedPaths.sharedCodexHome.appendingPathComponent("state.sqlite")) == "previous-thread-state", "shared state should preserve previous local thread state")
 expect(readFile(sharedPaths.sharedCodexHome.appendingPathComponent("config.toml")) == "previous-config", "shared state should preserve previous config when initialized")
 
+sleep(1)
+try writeFile(targetHome.appendingPathComponent("auth.json"), "target-auth-renewed")
+try CodexStateCoordinator(paths: sharedPaths).syncAuthToSharedIfProfileIsNewer(targetProfile)
+expect(readFile(sharedPaths.sharedCodexHome.appendingPathComponent("auth.json")) == "target-auth-renewed", "shared state should pick up a newer profile auth after re-login")
+
 let partialPaths = CodexStatePaths.temporary(root: testRoot.appendingPathComponent("partial-state", isDirectory: true))
 _ = try CodexStateCoordinator(paths: partialPaths).prepareForSwitch(
     previous: previousProfile,
@@ -156,7 +161,7 @@ _ = try CodexStateCoordinator(paths: partialPaths).prepareForSwitch(
     targetMode: .partialShared,
     initializeSharedFromPrevious: false
 )
-expect(readFile(targetHome.appendingPathComponent("auth.json")) == "target-auth", "partial shared mode should keep target auth")
+expect(readFile(targetHome.appendingPathComponent("auth.json")) == "target-auth-renewed", "partial shared mode should keep target auth")
 expect(readFile(targetHome.appendingPathComponent("config.toml")) == "previous-config", "partial shared mode should apply shared config")
 expect(readFile(targetHome.appendingPathComponent("state.sqlite")) != "previous-thread-state", "partial shared mode should not copy chat/thread state")
 

@@ -6,6 +6,13 @@ This project follows the versioning policy in [docs/VERSIONING.md](docs/VERSIONI
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-06-07
+
+### Fixed
+
+- Fixed shared-state quota refresh after re-login by syncing newer profile auth files into the shared Codex home before account requests.
+- Recognize revoked OAuth token responses as expired Codex login state and show the re-login guidance.
+
 ## [0.3.6] - 2026-06-06
 
 ### Added

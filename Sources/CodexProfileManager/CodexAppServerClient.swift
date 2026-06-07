@@ -18,6 +18,8 @@ final class CodexAppServerClient: @unchecked Sendable {
             case .serverError(let message):
                 if message.localizedCaseInsensitiveContains("authentication required")
                     || message.localizedCaseInsensitiveContains("token_invalidated")
+                    || message.localizedCaseInsensitiveContains("token_revoked")
+                    || message.localizedCaseInsensitiveContains("invalidated oauth token")
                     || message.localizedCaseInsensitiveContains("authentication token has been invalidated") {
                     "该账号的 Codex 登录已失效。请点击“登录/重新登录”，完成登录后再刷新额度。"
                 } else {
@@ -184,7 +186,7 @@ final class CodexAppServerClient: @unchecked Sendable {
                     id: 1,
                     method: "initialize",
                     params: [
-                        "clientInfo": ["name": "codex-profile-manager", "version": "0.3.6"],
+                        "clientInfo": ["name": "codex-profile-manager", "version": "0.3.7"],
                         "capabilities": ["experimentalApi": true],
                     ]
                 )
