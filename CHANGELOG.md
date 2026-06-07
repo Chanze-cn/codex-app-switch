@@ -6,6 +6,12 @@ This project follows the versioning policy in [docs/VERSIONING.md](docs/VERSIONI
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-06-07
+
+### Fixed
+
+- Clear a profile's old Codex credentials before launching the official login flow so re-login does not reuse a terminated ChatGPT app session.
+
 ## [0.3.8] - 2026-06-07
 
 ### Changed

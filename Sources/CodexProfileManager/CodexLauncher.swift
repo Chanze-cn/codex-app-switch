@@ -19,7 +19,7 @@ struct CodexLauncher {
     func login(profile: CodexProfile) throws -> String {
         guard let executable = CodexExecutableLocator.locate() else { throw LauncherError.launchFailed }
         let exports = CodexRuntimeEnvironment.shellExports(codexHome: profile.codexHome, codexExecutable: executable)
-        let command = "\(exports); \(shellQuote(executable)) login"
+        let command = "\(exports); \(shellQuote(executable)) logout >/dev/null 2>&1 || true; \(shellQuote(executable)) login"
         let tmp = URL(fileURLWithPath: profile.codexHome).appendingPathComponent("tmp", isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let script = tmp.appendingPathComponent("codex-login.command")
@@ -28,6 +28,7 @@ struct CodexLauncher {
         clear
         echo "正在为 Codex Profile 登录：\(profile.displayName)"
         echo "CODEX_HOME=\(profile.codexHome)"
+        echo "将先清理该 Profile 的旧 Codex 登录状态，再启动官方登录。"
         echo
         \(command)
         status=$?
